@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   GeoJSON,
   LayersControl,
@@ -7,6 +7,7 @@ import {
   Popup,
   TileLayer,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -38,7 +39,40 @@ const locationIcon = L.icon({
 
 function RecenterMap({ center }) {
   const map = useMap();
-  map.setView(center, 14);
+  const previousCenterRef = useRef(null);
+
+  useEffect(() => {
+    const previousCenter = previousCenterRef.current;
+    const hasChanged =
+      !previousCenter ||
+      previousCenter[0] !== center[0] ||
+      previousCenter[1] !== center[1];
+
+    if (!hasChanged) {
+      return;
+    }
+
+    if (previousCenter) {
+      map.flyTo(center, 14);
+    } else {
+      map.setView(center, 14);
+    }
+
+    previousCenterRef.current = center;
+  }, [center, map]);
+
+  return null;
+}
+
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click(event) {
+      if (typeof onMapClick === "function") {
+        onMapClick(event.latlng.lat, event.latlng.lng);
+      }
+    },
+  });
+
   return null;
 }
 
@@ -59,7 +93,7 @@ async function loadGeoJson(url) {
   return response.json();
 }
 
-function MapView({ position, analysis }) {
+function MapView({ position, analysis, onMapClick }) {
   const center = position ? [position.lat, position.lon] : defaultCenter;
   const distanceItems = analysis ? Object.entries(analysis.distances) : [];
   const [waterLayer, setWaterLayer] = useState(null);
@@ -107,6 +141,8 @@ function MapView({ position, analysis }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        <MapClickHandler onMapClick={onMapClick} />
 
         <RecenterMap center={center} />
 
