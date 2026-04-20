@@ -29,7 +29,7 @@ function InputPanel({
         />
       </label>
 
-      <button type="button" onClick={onCheckRisk}>
+      <button id="check-risk-btn" type="button" onClick={onCheckRisk}>
         Check Risk
       </button>
     </section>

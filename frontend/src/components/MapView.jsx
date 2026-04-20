@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GeoJSON,
   LayersControl,
   MapContainer,
   Marker,
-  Popup,
   TileLayer,
   useMap,
   useMapEvents,
@@ -93,12 +92,24 @@ async function loadGeoJson(url) {
   return response.json();
 }
 
-function MapView({ position, analysis, onMapClick }) {
+function MapView({ position, analysis, onMapClick, onMarkerClick }) {
   const center = position ? [position.lat, position.lon] : defaultCenter;
-  const distanceItems = analysis ? Object.entries(analysis.distances) : [];
   const [waterLayer, setWaterLayer] = useState(null);
   const [forestLayer, setForestLayer] = useState(null);
   const [restrictedLayer, setRestrictedLayer] = useState(null);
+
+  const markerEventHandlers = useMemo(
+    () => ({
+      click(event) {
+        if (typeof onMarkerClick !== "function") {
+          return;
+        }
+
+        onMarkerClick(event.latlng.lat, event.latlng.lng);
+      },
+    }),
+    [onMarkerClick],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -167,29 +178,11 @@ function MapView({ position, analysis, onMapClick }) {
         </LayersControl>
 
         {position && (
-          <Marker position={center} icon={locationIcon}>
-            <Popup>
-              {analysis ? (
-                <div>
-                  <div>
-                    Risk Level: <strong>{analysis.riskLevel}</strong>
-                  </div>
-                  <div>{analysis.explanation}</div>
-                  {distanceItems.length > 0 && (
-                    <div>
-                      {distanceItems.map(([key, value]) => (
-                        <div key={key}>
-                          {key}: {String(value)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>Checking risk...</div>
-              )}
-            </Popup>
-          </Marker>
+          <Marker
+            position={center}
+            icon={locationIcon}
+            eventHandlers={markerEventHandlers}
+          />
         )}
       </MapContainer>
     </section>
